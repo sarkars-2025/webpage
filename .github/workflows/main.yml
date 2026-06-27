@@ -1,0 +1,54 @@
+name: Deploy Jaspr Site with Flutter
+
+on:
+  push:
+    branches: [ "main" ] # Change to "master" if your default branch is master
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      # Fixed the syntax error here (colon replaced with dot)
+      url: ${{ steps.deployment.outputs.page_url }} 
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      # CRITICAL FIX: Sets up the Flutter SDK (which includes Dart)
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      # CRITICAL FIX: Pulls down your pubspec.yaml dependencies before building
+      - name: Install Dependencies
+        run: flutter pub get 
+
+      - name: Build Jaspr
+        run: |
+          dart pub global activate jaspr_cli
+          jaspr build --verbose
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'build/jaspr' # Uploads the compiled static assets
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
